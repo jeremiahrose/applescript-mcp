@@ -1,5 +1,7 @@
 # AppleScript MCP Server (Dual access: python and node.js)
 
+[![npm version](https://img.shields.io/npm/v/@peakmojo/applescript-mcp.svg)](https://www.npmjs.com/package/@peakmojo/applescript-mcp) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Overview
 
 A Model Context Protocol (MCP) server that lets you run AppleScript code to interact with Mac. This MCP is intentionally designed to be simple, straightforward, intuitive, and require minimal setup.
@@ -80,7 +82,7 @@ List all my upcoming calendar events for this week
     "applescript_execute": {
       "command": "npx",
       "args": [
-        "/path/to/repo/server.js"
+        "@peakmojo/applescript-mcp"
       ]
     }
   }
