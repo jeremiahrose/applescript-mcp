@@ -1,0 +1,16 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-server-applescript"
+version = "0.1.0"
+description = "MCP server for executing AppleScript on macOS"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp",
+    "pydantic"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/applescript_mcp"] 
