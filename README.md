@@ -95,7 +95,9 @@ List all my upcoming calendar events for this week
 Install uv
 ```
 brew install uv
+git clone ...
 ```
+
 Run the server
 ```
 {
@@ -103,8 +105,10 @@ Run the server
     "applescript_execute": {
       "command": "uv",
       "args": [
+        "--directory",
+        "/path/to/your/repo",
         "run",
-        "/path/to/repo/server.js"
+        "src/applescript_mcp/server.py"
       ]
     }
   }
