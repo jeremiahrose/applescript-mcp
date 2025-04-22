@@ -8,6 +8,8 @@ A Model Context Protocol (MCP) server that lets you run AppleScript code to inte
 
 I can't believe how simple and powerful it is. The core code is <100 line of code.
 
+https://github.com/user-attachments/assets/b85e63ba-fb26-4918-8e6d-2377254ee388
+
 ## Features
 
 * Run AppleScript to access Mac applications and data
