@@ -106,7 +106,7 @@ async def main():
                         temp.flush()
                         
                         # Execute the AppleScript
-                        cmd = ["osascript", temp_path]
+                        cmd = ["/usr/bin/osascript", temp_path]
                         result = subprocess.run(
                             cmd, 
                             capture_output=True, 

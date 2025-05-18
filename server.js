@@ -53,7 +53,7 @@ async function executeAppleScript(code, timeout = 60) {
     
     // Execute the AppleScript
     return new Promise((resolve, reject) => {
-      exec(`osascript "${tempPath}"`, { timeout: timeout * 1000 }, (error, stdout, stderr) => {
+      exec(`/usr/bin/osascript "${tempPath}"`, { timeout: timeout * 1000 }, (error, stdout, stderr) => {
         // Clean up the temporary file
         try {
           fs.unlinkSync(tempPath);
