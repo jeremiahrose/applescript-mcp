@@ -8,6 +8,10 @@ A Model Context Protocol (MCP) server that lets you run AppleScript code to inte
 
 I can't believe how simple and powerful it is. The core code is <100 line of code.
 
+<a href="https://glama.ai/mcp/servers/@peakmojo/applescript-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@peakmojo/applescript-mcp/badge" alt="AppleScript Server MCP server" />
+</a>
+
 https://github.com/user-attachments/assets/b85e63ba-fb26-4918-8e6d-2377254ee388
 
 ## Features
