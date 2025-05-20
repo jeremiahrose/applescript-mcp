@@ -20,6 +20,7 @@ https://github.com/user-attachments/assets/b85e63ba-fb26-4918-8e6d-2377254ee388
 * Interact with Notes, Calendar, Contacts, Messages, and more
 * Search for files using Spotlight or Finder
 * Read/write file contents and execute shell commands
+* Remote execution support via SSH
 
 ## Example Prompts
 
@@ -118,3 +119,30 @@ Run the server
   }
 }
 ```
+
+## Docker Usage
+
+When running in a Docker container, you can use the special hostname `host.docker.internal` to connect to your Mac host:
+
+### Configuration
+```json
+{
+  "mcpServers": {
+    "applescript_execute": {
+      "command": "npx",
+      "args": [
+        "@peakmojo/applescript-mcp",
+        "--remoteHost", "host.docker.internal",
+        "--remoteUser", "yourusername",
+        "--remotePassword", "yourpassword"
+      ]
+    }
+  }
+}
+```
+
+This allows your Docker container to execute AppleScript on the Mac host system. Make sure:
+
+1. SSH is enabled on your Mac (System Settings → Sharing → Remote Login)
+2. Your user has proper permissions
+3. The correct credentials are provided in the config

@@ -8,9 +8,31 @@ import os from 'os';
 import { exec } from 'child_process';
 import { fileURLToPath } from 'url';
 import { z } from 'zod';
+import { NodeSSH } from 'node-ssh';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Parse command line arguments
+const args = process.argv.slice(2);
+const config = {
+  remoteHost: 'localhost',
+  remotePassword: '',
+  remoteUser: '',
+};
+
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--remoteHost' && i + 1 < args.length) {
+    config.remoteHost = args[i + 1];
+    i++;
+  } else if (args[i] === '--remotePassword' && i + 1 < args.length) {
+    config.remotePassword = args[i + 1];
+    i++;
+  } else if (args[i] === '--remoteUser' && i + 1 < args.length) {
+    config.remoteUser = args[i + 1];
+    i++;
+  }
+}
 
 // Initialize logging
 const logLevels = {
@@ -44,6 +66,18 @@ class Logger {
 const logger = new Logger('applescript-mcp');
 
 async function executeAppleScript(code, timeout = 60) {
+  // Check if all remote credentials are available for SSH execution
+  const useRemote = config.remoteHost && config.remoteHost !== 'localhost' &&
+                    config.remoteUser && config.remotePassword;
+  
+  if (useRemote) {
+    return executeRemoteAppleScript(code, timeout);
+  } else {
+    return executeLocalAppleScript(code, timeout);
+  }
+}
+
+async function executeLocalAppleScript(code, timeout = 60) {
   // Create a temporary file for the AppleScript
   const tempPath = path.join(os.tmpdir(), `applescript_${Date.now()}.scpt`);
   
@@ -77,8 +111,83 @@ async function executeAppleScript(code, timeout = 60) {
   }
 }
 
+async function executeRemoteAppleScript(code, timeout = 60) {
+  logger.info(`Executing AppleScript on remote host: ${config.remoteHost}`);
+  
+  // Create a temporary file for the AppleScript
+  const localTempPath = path.join(os.tmpdir(), `applescript_${Date.now()}.scpt`);
+  const remoteTempPath = `/tmp/applescript_${Date.now()}.scpt`;
+  
+  try {
+    // Write the AppleScript to the temporary file
+    fs.writeFileSync(localTempPath, code);
+    
+    // Initialize SSH client
+    const ssh = new NodeSSH();
+    
+    // Connect to remote host
+    try {
+      await ssh.connect({
+        host: config.remoteHost,
+        username: config.remoteUser,
+        password: config.remotePassword,
+        // Useful when password auth fails and you need to try keyboard-interactive
+        tryKeyboard: true,
+        onKeyboardInteractive: (name, instructions, lang, prompts, finish) => {
+          if (prompts.length > 0 && prompts[0].prompt.toLowerCase().includes('password')) {
+            finish([config.remotePassword]);
+          }
+        }
+      });
+      
+      logger.info('SSH connection established successfully');
+      
+      // Upload the AppleScript file
+      await ssh.putFile(localTempPath, remoteTempPath);
+      
+      // Execute the AppleScript on the remote machine
+      const result = await ssh.execCommand(`/usr/bin/osascript "${remoteTempPath}"`, {
+        timeout: timeout * 1000
+      });
+      
+      // Clean up the remote file
+      await ssh.execCommand(`rm -f "${remoteTempPath}"`);
+      
+      // Clean up the local file
+      try {
+        fs.unlinkSync(localTempPath);
+      } catch (e) {
+        logger.warn(`Failed to delete local temporary file: ${e.message}`);
+      }
+      
+      // Disconnect from the remote host
+      ssh.dispose();
+      
+      if (result.code !== 0) {
+        return `Remote AppleScript execution failed: ${result.stderr}`;
+      }
+      
+      return result.stdout;
+    } catch (sshError) {
+      // Clean up the local file on error
+      try {
+        fs.unlinkSync(localTempPath);
+      } catch (e) {
+        logger.warn(`Failed to delete local temporary file: ${e.message}`);
+      }
+      
+      return `SSH error: ${sshError.message}`;
+    }
+  } catch (e) {
+    return `Error executing remote AppleScript: ${e.message}`;
+  }
+}
+
 async function main() {
   logger.info('Starting AppleScript MCP server');
+  logger.info(`Using remote host: ${config.remoteHost}`);
+  logger.info(`Remote user: ${config.remoteUser || 'not set'}`);
+  logger.info(`Remote password ${config.remotePassword ? 'is' : 'is not'} set`);
   
   try {
     // Create the server
@@ -105,6 +214,19 @@ async function main() {
         }
         
         try {
+          // Inject configuration variables into the AppleScript environment if needed
+          if (code_snippet.includes('{{REMOTE_HOST}}')) {
+            code_snippet = code_snippet.replace(/\{\{REMOTE_HOST\}\}/g, config.remoteHost);
+          }
+          
+          if (code_snippet.includes('{{REMOTE_PASSWORD}}')) {
+            code_snippet = code_snippet.replace(/\{\{REMOTE_PASSWORD\}\}/g, config.remotePassword);
+          }
+          
+          if (code_snippet.includes('{{REMOTE_USER}}')) {
+            code_snippet = code_snippet.replace(/\{\{REMOTE_USER\}\}/g, config.remoteUser);
+          }
+          
           const result = await executeAppleScript(code_snippet, timeout);
           return {
             content: [{ type: 'text', text: result }]
