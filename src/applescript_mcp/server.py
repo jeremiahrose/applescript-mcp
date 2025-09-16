@@ -10,6 +10,7 @@ import mcp.types as types
 from mcp.server import NotificationOptions, Server
 import mcp.server.stdio
 from pydantic import AnyUrl
+from . import tools
 
 logger = logging.getLogger('applescript_mcp')
 
@@ -36,7 +37,7 @@ def configure_logging():
     logger.info(f"Logging configured with level: {args.log_level.upper()}")
 
 
-async def main():
+async def main(access_token=None):
     """Run the AppleScript MCP server."""
     configure_logging()
     logger.info("Server starting")
@@ -53,85 +54,15 @@ async def main():
     @server.list_tools()
     async def handle_list_tools() -> list[types.Tool]:
         """List available tools"""
-        return [
-            types.Tool(
-                name="applescript_execute",
-                description="""Run AppleScript code to interact with Mac applications and system features. This tool can access and manipulate data in Notes, Calendar, Contacts, Messages, Mail, Finder, Safari, and other Apple applications. Common use cases include but not limited to:
-- Retrieve or create notes in Apple Notes
-- Access or add calendar events and appointments
-- List contacts or modify contact details
-- Search for and organize files using Spotlight or Finder
-- Get system information like battery status, disk space, or network details
-- Read or organize browser bookmarks or history
-- Access or send emails, messages, or other communications
-- Read, write, or manage file contents
-- Execute shell commands and capture the output
-""",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "code_snippet": {
-                            "type": "string",
-                            "description": """Multi-line appleScript code to execute. """
-                        },
-                        "timeout": {
-                            "type": "integer",
-                            "description": "Command execution timeout in seconds (default: 60)"
-                        }
-                    },
-                    "required": ["code_snippet"]
-                },
-            )
-        ]
+        return tools.get_tools()
 
     @server.call_tool()
     async def handle_call_tool(
         name: str, arguments: dict[str, Any] | None
     ) -> list[types.TextContent | types.ImageContent | types.EmbeddedResource]:
-        """Handle execution of AppleScript to interact with Mac applications and data"""
+        """Handle execution of macOS tools"""
         try:
-            if name == "applescript_execute":
-                if not arguments or "code_snippet" not in arguments:
-                    raise ValueError("Missing code_snippet argument")
-
-                # Get timeout parameter or use default
-                timeout = arguments.get("timeout", 60)
-                
-                # Create temp file for the AppleScript
-                with tempfile.NamedTemporaryFile(suffix='.scpt', delete=False) as temp:
-                    temp_path = temp.name
-                    try:
-                        # Write the AppleScript to the temp file
-                        temp.write(arguments["code_snippet"].encode('utf-8'))
-                        temp.flush()
-                        
-                        # Execute the AppleScript
-                        cmd = ["/usr/bin/osascript", temp_path]
-                        result = subprocess.run(
-                            cmd, 
-                            capture_output=True, 
-                            text=True, 
-                            timeout=timeout
-                        )
-                        
-                        if result.returncode != 0:
-                            error_message = f"AppleScript execution failed: {result.stderr}"
-                            return [types.TextContent(type="text", text=error_message)]
-                        
-                        return [types.TextContent(type="text", text=result.stdout)]
-                    except subprocess.TimeoutExpired:
-                        return [types.TextContent(type="text", text=f"AppleScript execution timed out after {timeout} seconds")]
-                    except Exception as e:
-                        return [types.TextContent(type="text", text=f"Error executing AppleScript: {str(e)}")]
-                    finally:
-                        # Clean up the temporary file
-                        try:
-                            os.unlink(temp_path)
-                        except:
-                            pass
-            else:
-                raise ValueError(f"Unknown tool: {name}")
-
+            return await tools.handle_tool_call(name, arguments or {})
         except Exception as e:
             return [types.TextContent(type="text", text=f"Error: {str(e)}")]
 

@@ -8,9 +8,12 @@ version = "0.1.0"
 description = "MCP server for executing AppleScript on macOS"
 requires-python = ">=3.10"
 dependencies = [
-    "mcp",
-    "pydantic"
+    "mcp>=1.0.0",
+    "pydantic>=2.0.0"
 ]
+
+[project.scripts]
+applescript-mcp = "applescript_mcp:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/applescript_mcp"] 
